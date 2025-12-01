@@ -41,13 +41,13 @@ struct SystemEventIndicatorModifier: View {
                             .frame(width: 20, height: 15, alignment: .leading)
                     }
                 
-                case .brightness:
+                case .brightness, .brightnessOpened:
                     Image(systemName: "sun.max.fill")
                         .contentTransition(.symbolEffect)
                         .frame(width: 20, height: 15)
                         .foregroundStyle(.white)
                 
-                case .backlight:
+                case .backlight, .backlightOpened:
                     Image(systemName: value > 0.5 ? "light.max" : "light.min")
                         .contentTransition(.interpolate)
                         .frame(width: 20, height: 15)

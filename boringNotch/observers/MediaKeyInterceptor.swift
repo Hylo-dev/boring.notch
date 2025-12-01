@@ -205,18 +205,25 @@ final class MediaKeyInterceptor {
                 self.playFeedbackSound()
                 VolumeManager.shared.increase(stepDivisor: stepDivisor)
             }
+            
         case .soundDown:
             Task { @MainActor in
                 self.playFeedbackSound()
                 VolumeManager.shared.decrease(stepDivisor: stepDivisor)
             }
+            
         case .mute:
             Task { @MainActor in
                 VolumeManager.shared.toggleMuteAction()
             }
+            
         case .brightnessUp, .keyboardBrightnessUp:
             let delta = step / stepDivisor
-            adjustBrightness(delta: delta, keyboard: keyType == .keyboardBrightnessUp || command)
+            adjustBrightness(
+                delta: delta,
+                keyboard: keyType == .keyboardBrightnessUp || command
+            )
+            
         case .brightnessDown, .keyboardBrightnessDown:
             let delta = -(step / stepDivisor)
             adjustBrightness(delta: delta, keyboard: keyType == .keyboardBrightnessDown || command)
@@ -238,18 +245,23 @@ final class MediaKeyInterceptor {
             switch keyType {
             case .soundUp, .soundDown, .mute:
                 let v = VolumeManager.shared.rawVolume
-                BoringViewCoordinator.shared.toggleSneakPeek(status: true, type: .volume, value: CGFloat(v))
+                BoringViewCoordinator.shared.toggleSneakPeek(type: .volumeOpened, value: CGFloat(v))
+                
             case .brightnessUp, .brightnessDown:
                 if command {
                     let v = KeyboardBacklightManager.shared.rawBrightness
-                    BoringViewCoordinator.shared.toggleSneakPeek(status: true, type: .backlight, value: CGFloat(v))
+                    BoringViewCoordinator.shared.toggleSneakPeek(type: .backlightOpened, value: CGFloat(v))
+                    
                 } else {
                     let v = BrightnessManager.shared.rawBrightness
-                    BoringViewCoordinator.shared.toggleSneakPeek(status: true, type: .brightness, value: CGFloat(v))
+                    BoringViewCoordinator.shared.toggleSneakPeek(type: .brightnessOpened, value: CGFloat(v))
+                    
                 }
+                
             case .keyboardBrightnessUp, .keyboardBrightnessDown:
                 let v = KeyboardBacklightManager.shared.rawBrightness
-                BoringViewCoordinator.shared.toggleSneakPeek(status: true, type: .backlight, value: CGFloat(v))
+                BoringViewCoordinator.shared.toggleSneakPeek(type: .backlightOpened, value: CGFloat(v))
+                
             }
         }
     }
@@ -260,12 +272,15 @@ final class MediaKeyInterceptor {
         switch keyType {
         case .soundUp, .soundDown, .mute:
             urlString = "x-apple.systempreferences:com.apple.preference.sound"
+            
         case .brightnessUp, .brightnessDown:
             if command {
                 urlString = "x-apple.systempreferences:com.apple.preference.keyboard"
+                
             } else {
                 urlString = "x-apple.systempreferences:com.apple.preference.displays"
             }
+            
         case .keyboardBrightnessUp, .keyboardBrightnessDown:
             urlString = "x-apple.systempreferences:com.apple.preference.keyboard"
         }

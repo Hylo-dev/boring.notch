@@ -39,7 +39,7 @@ struct InlineHUD: View {
                 
                 Group {
                     switch (type) {
-                        case .volume:
+                        case .volumeOpened, .volume:
                             if icon.isEmpty {
                                 Image(systemName: SpeakerSymbol(value))
                                     .contentTransition(.interpolate)
@@ -54,12 +54,12 @@ struct InlineHUD: View {
                                     .frame(width: 20, height: 15, alignment: .leading)
                             }
                         
-                        case .brightness:
+                        case .brightnessOpened, .brightness:
                             Image(systemName: BrightnessSymbol(value))
                                 .contentTransition(.interpolate)
                                 .frame(width: 20, height: 15, alignment: .center)
                         
-                        case .backlight:
+                        case .backlightOpened, .backlight:
                             Image(systemName: value > 0.5 ? "light.max" : "light.min")
                                 .contentTransition(.interpolate)
                                 .frame(width: 20, height: 15, alignment: .center)
@@ -114,17 +114,17 @@ struct InlineHUD: View {
                             
                             if Defaults[.showClosedInlineHUDProgressBar] {
                                 DraggableProgressBar(value: $value, onChange: { v in
-                                    if type == .volume {
+                                    if type == .volume || type == .volumeOpened {
                                         VolumeManager.shared.setAbsolute(Float32(v))
                                         
-                                    } else if type == .brightness {
+                                    } else if type == .brightness || type == .brightnessOpened{
                                         BrightnessManager.shared.setAbsolute(value: Float32(v))
                                         
                                     }
                                 })
                             }
                             
-                            if type == .volume &&
+                            if type == .volume || type == .volumeOpened &&
                                 value.isZero &&
                                 Defaults[.showClosedInlineHUDDescriptiveText]
                             {
@@ -139,7 +139,7 @@ struct InlineHUD: View {
                             } else if Defaults[.showClosedNotchHUDPercentage] {
                                 Text("\(Int(value * 100))%")
                                     .font(.caption)
-                                    .fontDesign(.monospaced)
+                                    .fontDesign(.rounded)
                                     .foregroundStyle(
                                         size == 100 ? .secondary : .primary
                                     )
@@ -168,12 +168,16 @@ struct InlineHUD: View {
         switch(value) {
             case 0:
                 return "speaker"
+            
             case 0...0.3:
                 return "speaker.wave.1"
+            
             case 0.3...0.8:
                 return "speaker.wave.2"
+            
             case 0.8...1:
                 return "speaker.wave.3"
+            
             default:
                 return "speaker.wave.2"
         }
@@ -192,14 +196,18 @@ struct InlineHUD: View {
     
     func Type2Name(_ type: SneakContentType) -> String {
         switch(type) {
-            case .volume:
+            case .volume, .volumeOpened:
                 return "Volume"
-            case .brightness:
+            
+            case .brightness, .brightnessOpened:
                 return "Brightness"
-            case .backlight:
+            
+            case .backlight, .backlightOpened:
                 return "Backlight"
+            
             case .mic:
                 return "Mic"
+            
             default:
                 return ""
         }

@@ -352,12 +352,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         KeyboardShortcuts.onKeyDown(for: .toggleSneakPeek) { [weak self] in
             guard let self = self else { return }
             if Defaults[.sneakPeekStyles] == .inline {
-                let newStatus = !self.coordinator.expandingView.show
+                let newStatus = !self.coordinator.expandingView.type.isOpen
                 self.coordinator.toggleExpandingView(status: newStatus, type: .music)
+                
             } else {
                 self.coordinator.toggleSneakPeek(
-                    status: !self.coordinator.sneakPeek.show,
-                    type: .music,
+                    type: getContentStatus(
+                        raw: SneakContentType.music.rawValue,
+                        isOpen: !self.coordinator.sneakPeek.type.isOpen),
                     duration: 3.0
                 )
             }

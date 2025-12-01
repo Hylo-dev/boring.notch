@@ -10,18 +10,50 @@ import Combine
 import Defaults
 import SwiftUI
 
-enum SneakContentType {
-    case brightness
-    case volume
-    case backlight
-    case music
-    case mic
-    case battery
-    case download
+enum SneakContentType: String {
+    case brightness = "brightness"
+    case brightnessOpened = "brightnessOpened"
+    case volume     = "volume"
+    case volumeOpened = "volumeOpened"
+    case backlight  = "backlight"
+    case backlightOpened  = "backlightOpened"
+    case music      = "music"
+    case musicOpened = "musicOpened"
+    case mic        = "mic"
+    case battery    = "battery"
+    case batteryOpened = "batteryOpened"
+    case download   = "download"
+    
+    var isOpen: Bool {
+        
+        switch self {
+            case .volumeOpened, .musicOpened, .batteryOpened, .brightnessOpened, .backlightOpened:
+                true
+                
+            default:
+                false
+        }
+    }
+}
+
+func getContentStatus(
+    raw: String,
+    isOpen: Bool
+) -> SneakContentType {
+  
+    var finalRaw = raw.replacingOccurrences(of: "Opened", with: "")
+    
+    if isOpen { finalRaw += "Opened" }
+    
+    return SneakContentType(rawValue: finalRaw) ?? .music
+}
+
+enum StatusContentType {
+    case showBattery
+    case showMusic
 }
 
 struct sneakPeek {
-    var show: Bool = false
     var type: SneakContentType = .music
     var value: CGFloat = 0
     var icon: String = ""
@@ -40,7 +72,6 @@ enum BrowserType {
 }
 
 struct ExpandedItem {
-    var show: Bool = false
     var type: SneakContentType = .battery
     var value: CGFloat = 0
     var browser: BrowserType = .chromium
@@ -50,8 +81,12 @@ struct ExpandedItem {
 class BoringViewCoordinator: ObservableObject {
     static let shared = BoringViewCoordinator()
 
-    @Published var currentView: NotchViews = .home
-    @Published var helloAnimationRunning: Bool = false
+    @Published
+    var currentView: NotchViews = .home
+    
+    @Published
+    var helloAnimationRunning: Bool = false
+    
     private var sneakPeekDispatch: DispatchWorkItem?
     private var expandingViewDispatch: DispatchWorkItem?
     private var hudEnableTask: Task<Void, Never>?
@@ -98,24 +133,30 @@ class BoringViewCoordinator: ObservableObject {
     @Published var selectedScreenUUID: String = NSScreen.main?.displayUUID ?? ""
 
     @Published var optionKeyPressed: Bool = true
+    
     private var accessibilityObserver: Any?
     private var hudReplacementCancellable: AnyCancellable?
 
     private init() {
+        
         // Perform migration from name-based to UUID-based storage
         if preferredScreenUUID == nil, let legacyName = legacyPreferredScreenName {
             // Try to find screen by name and migrate to UUID
-            if let screen = NSScreen.screens.first(where: { $0.localizedName == legacyName }),
-               let uuid = screen.displayUUID {
+            if let screen = NSScreen.screens.first(
+                where: { $0.localizedName == legacyName }
+            ), let uuid = screen.displayUUID {
                 preferredScreenUUID = uuid
                 NSLog("✅ Migrated display preference from name '\(legacyName)' to UUID '\(uuid)'")
+                
             } else {
                 // Fallback to main screen if legacy screen not found
                 preferredScreenUUID = NSScreen.main?.displayUUID
                 NSLog("⚠️ Could not find display named '\(legacyName)', falling back to main screen")
             }
+            
             // Clear legacy value after migration
             legacyPreferredScreenName = nil
+            
         } else if preferredScreenUUID == nil {
             // No legacy value, use main screen
             preferredScreenUUID = NSScreen.main?.displayUUID
@@ -151,6 +192,7 @@ class BoringViewCoordinator: ObservableObject {
 
                             if granted {
                                 await MediaKeyInterceptor.shared.start()
+                                
                             } else {
                                 Defaults[.hudReplacement] = false
                             }
@@ -180,15 +222,11 @@ class BoringViewCoordinator: ObservableObject {
         if let decodedData = try? decoder.decode(
             SharedSneakPeek.self, from: notification.userInfo?.first?.value as! Data)
         {
-            let contentType =
-                decodedData.type == "brightness"
-                ? SneakContentType.brightness
-                : decodedData.type == "volume"
-                    ? SneakContentType.volume
-                    : decodedData.type == "backlight"
-                        ? SneakContentType.backlight
-                        : decodedData.type == "mic"
-                            ? SneakContentType.mic : SneakContentType.brightness
+           
+            let contentType = getContentStatus(
+                raw: decodedData.type,
+                isOpen: decodedData.show
+            )
 
             let formatter = NumberFormatter()
             formatter.locale = Locale(identifier: "en_US_POSIX")
@@ -198,7 +236,11 @@ class BoringViewCoordinator: ObservableObject {
 
             print("Decoded: \(decodedData), Parsed value: \(value)")
 
-            toggleSneakPeek(status: decodedData.show, type: contentType, value: value, icon: icon)
+            toggleSneakPeek(
+                type: contentType,
+                value: value,
+                icon: icon
+            )
 
         } else {
             print("Failed to decode JSON data")
@@ -206,22 +248,25 @@ class BoringViewCoordinator: ObservableObject {
     }
 
     func toggleSneakPeek(
-        status: Bool, type: SneakContentType, duration: TimeInterval = 1.5, value: CGFloat = 0,
+        type: SneakContentType,
+        duration: TimeInterval = 1.5,
+        value: CGFloat = 0,
         icon: String = ""
     ) {
         sneakPeekDuration = duration
+        
         if type != .music {
             // close()
             if !Defaults[.hudReplacement] {
                 return
             }
         }
+        
         Task { @MainActor in
             withAnimation(.smooth) {
-                self.sneakPeek.show = status
-                self.sneakPeek.type = type
+                self.sneakPeek.type  = type
                 self.sneakPeek.value = value
-                self.sneakPeek.icon = icon
+                self.sneakPeek.icon  = icon
             }
         }
 
@@ -242,7 +287,7 @@ class BoringViewCoordinator: ObservableObject {
             guard let self = self, !Task.isCancelled else { return }
             await MainActor.run {
                 withAnimation {
-                    self.toggleSneakPeek(status: false, type: .music)
+                    self.toggleSneakPeek(type: .music)
                     self.sneakPeekDuration = 1.5
                 }
             }
@@ -251,11 +296,10 @@ class BoringViewCoordinator: ObservableObject {
 
     @Published var sneakPeek: sneakPeek = .init() {
         didSet {
-            if sneakPeek.show {
+            if sneakPeek.type.isOpen {
                 scheduleSneakPeekHide(after: sneakPeekDuration)
-            } else {
-                sneakPeekTask?.cancel()
-            }
+                
+            } else { sneakPeekTask?.cancel() }
         }
     }
 
@@ -267,8 +311,10 @@ class BoringViewCoordinator: ObservableObject {
     ) {
         Task { @MainActor in
             withAnimation(.smooth) {
-                self.expandingView.show = status
-                self.expandingView.type = type
+                self.expandingView.type = getContentStatus(
+                    raw: type.rawValue,
+                    isOpen: status
+                )
                 self.expandingView.value = value
                 self.expandingView.browser = browser
             }
@@ -279,18 +325,19 @@ class BoringViewCoordinator: ObservableObject {
 
     @Published var expandingView: ExpandedItem = .init() {
         didSet {
-            if expandingView.show {
+            if expandingView.type.isOpen {
                 expandingViewTask?.cancel()
+                
                 let duration: TimeInterval = (expandingView.type == .download ? 2 : 3)
                 let currentType = expandingView.type
+                
                 expandingViewTask = Task { [weak self] in
                     try? await Task.sleep(for: .seconds(duration))
                     guard let self = self, !Task.isCancelled else { return }
                     self.toggleExpandingView(status: false, type: currentType)
                 }
-            } else {
-                expandingViewTask?.cancel()
-            }
+                
+            } else { expandingViewTask?.cancel() }
         }
     }
     

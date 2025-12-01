@@ -20,7 +20,7 @@ struct OpenNotchHUD: View {
             // Icon
             Group {
                 switch type {
-                    case .volume:
+                    case .volume, .volumeOpened:
                         if icon.isEmpty {
                             Image(systemName: SpeakerSymbol(value))
                                 .contentTransition(.interpolate)
@@ -30,11 +30,11 @@ struct OpenNotchHUD: View {
                                 .contentTransition(.interpolate)
                         }
                         
-                    case .brightness:
+                    case .brightness, .brightnessOpened:
                         Image(systemName: "sun.max.fill")
                             .contentTransition(.symbolEffect)
                         
-                    case .backlight:
+                    case .backlight, .backlightOpened:
                         Image(systemName: value > 0.5 ? "light.max" : "light.min")
                             .contentTransition(.interpolate)
                         
@@ -94,10 +94,10 @@ struct OpenNotchHUD: View {
     
     func updateSystemValue(_ newVal: CGFloat) {
         switch type {
-            case .volume:
+            case .volume, .volumeOpened:
                 VolumeManager.shared.setAbsolute(Float32(newVal))
             
-            case .brightness:
+            case .brightness, .brightnessOpened:
                 BrightnessManager.shared.setAbsolute(value: Float32(newVal))
             
             default:

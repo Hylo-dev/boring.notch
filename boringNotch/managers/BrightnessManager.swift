@@ -32,12 +32,17 @@ final class BrightnessManager: ObservableObject {
 			let starting = await client.currentScreenBrightness() ?? rawBrightness
 			let target = max(0, min(1, starting + delta))
 			let ok = await client.setScreenBrightness(target)
+            
 			if ok {
 				publish(brightness: target, touchDate: true)
 			} else {
 				refresh()
 			}
-			BoringViewCoordinator.shared.toggleSneakPeek(status: true, type: .brightness, value: CGFloat(target))
+            
+			BoringViewCoordinator.shared.toggleSneakPeek(
+                type: .brightnessOpened,
+                value: CGFloat(target)
+            )
 		}
 	}
 
@@ -93,13 +98,14 @@ final class KeyboardBacklightManager: ObservableObject {
 			let starting = await client.currentKeyboardBrightness() ?? rawBrightness
 			let target = max(0, min(1, starting + delta))
 			let ok = await client.setKeyboardBrightness(target)
+            
 			if ok {
 				publish(brightness: target, touchDate: true)
 			} else {
 				refresh()
 			}
+            
 			BoringViewCoordinator.shared.toggleSneakPeek(
-				status: true,
 				type: .backlight,
 				value: CGFloat(target)
 			)
